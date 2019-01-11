@@ -2,14 +2,16 @@ pyth
 ====
 
 
-Works as a shorter `$ python`
-`$ pyth -c "print('hello')"`
+pyth works as a shorter name for `python`
 
-`;` starts "a new command" in pyth, e.g.
-`$ pyth -c "print('hello')"; my_great_script; pudb fred.py; -c "print('hello')"`
+    $ pyth -c "print('hello')"
 
 interpreter
 -----------
+
+`;` starts "a new `command`" in pyth, e.g.
+
+    $ pyth -c "print('hello')"; my_great_script; pudb fred.py; -c "print('hello')"`
 
 pyth chooses interpreters and venvs depending on what the environ or script says
 In the e.g. above: `pudb fred.py`

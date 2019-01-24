@@ -1,79 +1,87 @@
 #! /bin/cat
 
 
-__file__=$BASH_SOURCE
-
 pyth () {
     local __doc__="""Run script, which might have a shebang, under interpreters (default python)"""
+    local _interpreter=
     local _default_interpreter=python
     if [[ $1 =~ ipython ]]; then
         _default_interpreter=$1
         shift
     fi
     local _words=
+    local _which=
     for _arg in "$@"; do
+        if [[ $_arg =~ ^- ]]; then
+            _words="$_words $_arg"
+            continue
+        fi
         if [[ -d "$_arg" ]]; then
             echo Choose one: $(ls "$_arg/")
             continue
         fi
-        if type $_arg >/dev/null 2>&1; then
-            _interpreter=$_arg
-            continue
+        if type "$_arg" >/dev/null 2>&1; then
+            _which=$(which "$_arg")
+            [[ $_which ]] && _interpreter="$_which"
+            # continue
         fi
-        if [[ $_arg == ";" ]]; then
-            [[ ! _interpreter ]] && _interpreter=$_default_interpreter
+        if [[ "$_arg" == ";" ]]; then
+            [[ $_interpreter ]] || _interpreter=$_default_interpreter
             pypath $_interpreter $words
             _interpreter=$_default_interpreter
             _words=
             continue
         fi
-        _words="$_words $_args"
+        _words="$_words $_arg"
         [[ -f "$_arg" ]] || continue
         local _script="$_arg"
         local _shebang_interpreter=$(shebang_interpreter $_interpreter "$_script")
         [[ $_shebang_interpreter ]] && _interpreter=$_shebang_interpreter
     done
-    [[ ! _interpreter ]] && _interpreter=$_default_interpreter
-    pypath $_interpreter $words
+    [[ $_interpreter ]] || _interpreter=$_default_interpreter
+    pypath $_interpreter $_words
 }
 
 pypath () {
     local __doc__="""Restrict PATH when running python commands"""
 
     local _interpreter=$1; shift
-    local _script=$2; shift
+    local _script=$1; shift
 
     local _path="$HOME/bin:/usr/local/bin:/usr/bin"
     local _venv_bin="${VIRTUAL_ENV:-xxx}"/bin
-    local _script_dir=$(dirname $_script)
+    local _active_dir=$( [[ -e $_script ]] && $(dirname $_script) )
     local _activate=
-    if [[ -f $_script_dir/activate ]]; then
-        _activate=$_script_dir/activate
-        _activate_link=$(readlink -f "$_activate")
-        _venv_bin=$(dirname $_activate_link)
+    if [[ -d $_script_dir ]]; then
+        local _active_file=$_script_dir/activate
+        _activate=$( [[ -f $_active_file ]] && echo "$_active_file" )
+        if [[ $_activate ]]; then
+            _activate_link=$(readlink -f "$_activate")
+            _venv_bin=$(dirname $_activate_link)
+        fi
     fi
     if [[ -d $_venv_bin ]] ; then
         if [[ -e $_venv_bin/$_interpreter ]] ; then
             _path="$_venv_bin:$_path"
         else
             [[ -f "$_activate" ]] && echo "Not executable: $_venv_bin/$_interpreter" >&2
-            which $_interpreter > dev/null || return 1
+            which $_interpreter > /dev/null || return 1
         fi
     fi
     if [[ -n $NO_SUB_SHELL ]]; then
-        # works per call only e.g. 
+        # works per call only e.g.
         #     $ NO_SUB_SHELL=1 pypath python -c "import sys; sys.stdout.write('hello world'"
-        PATH=$_path $_interpreter "$@"
-        NO_SUB_SHELL= 
+        PATH=$_path $_interpreter $_script "$@"
+        NO_SUB_SHELL=
     elif [[ $_interpreter =~ python || -f "$_activate" ]]; then
         (
             [[ -f "$_activate" ]] && source "$_activate";
-            PATH=$_path $_interpreter "$@"
+            PATH=$_path $_interpreter $_script "$@"
         )
     else
         # Other programs might not like the subshell so much
         # pudb refused to co-operate
-        PATH=$_path $_interpreter "$@"
+        PATH=$_path $_interpreter $_script "$@"
     fi
 }
 

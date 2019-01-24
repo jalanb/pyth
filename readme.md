@@ -14,13 +14,14 @@ interpreter
     $ pyth -c "print('hello')"; my_great_script; pudb fred.py; -c "print('hello')"`
 
 pyth chooses interpreters and venvs depending on what the environ or script says
-In the e.g. above: `pudb fred.py`
-    pudb might run under `python3` (my normal environement), or under `python2` if
+
+In the example above pyth will interpret the command `pudb fred.py` as:
+    pudb should run under `python3` (my normal environement), or under `python2` if
     # fred.py has a shebang command for python2
     # fred.py is in a dir with an activate script, which resolves to a python2
     # TODO: fred.py is in a project with an activate ...
 
-The interpreter starts as whatever local shell says `python` is
+The interpreter starts as whatever the local shell says `python` is
 If the first word on a new command is a bash command and has a pythonic file
     the interpreter adds the file to itself
 Else

@@ -28,7 +28,8 @@ Else
   The interpreter is changed back to shell python
 fi
 
-These rules work with ipython, pip2, pudb3, ... (WFM, YMMV: every pythonic program)
+These rules work with ipython, pip2, pudb3, ... 
+    and should work with any pythonic program (WFM, YMMV)
 
 Sub Shell
 ---------

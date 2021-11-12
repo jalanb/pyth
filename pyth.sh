@@ -3,85 +3,83 @@
 
 pyth () {
     local __doc__="""Run script, which might have a shebang, under interpreters (default python)"""
-    local _interpreter=
-    local _default_interpreter=python
-    if [[ $1 =~ ipython ]]; then
-        _default_interpreter=$1
+    local python_= local_python_=python3
+    local words_= options_= 
+    if [[ $1 =~ ipython3* ]]; then
+        local_python_=$1
         shift
     fi
-    local _words=
-    local _which=
-    for _arg in "$@"; do
-        if [[ $_arg =~ ^- ]]; then
-            _words="$_words $_arg"
+    for arg_ in "$@"; do
+        if [[ $arg_ =~ ^- ]]; then
+            options_="$options_ $arg_"
             continue
         fi
-        if [[ -d "$_arg" ]]; then
-            echo Choose one: $(ls "$_arg/")
+        if [[ -d "$arg_" ]]; then
+            echo Choose one: $(ls "$arg_/")
             continue
         fi
-        if type "$_arg" >/dev/null 2>&1; then
-            _which=$(which "$_arg")
-            [[ $_which ]] && _interpreter="$_which"
-            # continue
+        if type "$arg_" >/dev/null 2>&1; then
+            if [[ $arg_ =~ py ]]; then
+                local type_python_=$(type "$arg_" 2>/dev/null)
+                [[ $type_python_ ]] && python_="$type_python_"
+            fi
         fi
-        if [[ "$_arg" == ";" ]]; then
-            [[ $_interpreter ]] || _interpreter=$_default_interpreter
-            pypath $_interpreter $words
-            _interpreter=$_default_interpreter
-            _words=
+        if [[ "$arg_" == ";" ]]; then
+            [[ $python_ ]] || python_=$local_python_
+            pypath $python_ $words
+            words_=
             continue
         fi
-        _words="$_words $_arg"
-        [[ -f "$_arg" ]] || continue
-        local _script="$_arg"
-        local _shebang_interpreter=$(shebang_interpreter $_interpreter "$_script")
-        [[ $_shebang_interpreter ]] && _interpreter=$_shebang_interpreter
+        words_="$words_ $arg_"
+        [[ -f "$arg_" ]] || continue
+        local script_="$arg_"
+        local shebang_python_=$(shebang_interpreter $python_ "$script_")
+        [[ $shebang_python_ ]] && python_=$shebang_python_
     done
-    [[ $_interpreter ]] || _interpreter=$_default_interpreter
-    pypath $_interpreter $_words
+    [[ $python_ ]] || python_=$local_python_
+    pypath $python_ $options_ $words_
 }
 
 pypath () {
     local __doc__="""Restrict PATH when running python commands"""
 
-    local _interpreter=$1; shift
-    local _script=$1; shift
+    local interpreter_=$1; shift
+    local script_=$1; shift
 
-    local _path="$HOME/bin:/usr/local/bin:/usr/bin"
-    local _venv_bin="${VIRTUAL_ENV:-xxx}"/bin
-    local _active_dir=$( [[ -e $_script ]] && $(dirname $_script) )
-    local _activate=
-    if [[ -d $_script_dir ]]; then
-        local _active_file=$_script_dir/activate
-        _activate=$( [[ -f $_active_file ]] && echo "$_active_file" )
-        if [[ $_activate ]]; then
-            _activate_link=$(readlink -f "$_activate")
-            _venv_bin=$(dirname $_activate_link)
+    local path_="$HOME/bin:/usr/local/bin:/usr/bin"
+    local venv_bin_="${VIRTUAL_ENV:-xxx}"/bin
+    local active_dir_=$( [[ -e $script_ ]] && $(dirname $script_) )
+    local activate_=
+    if [[ -d $script_dir_ ]]; then
+        local active_file_=$script_dir_/activate
+        activate_=$( [[ -f $active_file_ ]] && echo "$active_file_" )
+        if [[ $activate_ ]]; then
+            activate_link_=$(readlink -f "$activate_")
+            venv_bin_=$(dirname $activate_link_)
         fi
     fi
-    if [[ -d $_venv_bin ]] ; then
-        if [[ -e $_venv_bin/$_interpreter ]] ; then
-            _path="$_venv_bin:$_path"
+    if [[ -d $venv_bin_ ]] ; then
+        if [[ -e $venv_bin_/$interpreter_ ]] ; then
+            path_="$venv_bin_:$path_"
         else
-            [[ -f "$_activate" ]] && echo "Not executable: $_venv_bin/$_interpreter" >&2
-            which $_interpreter > /dev/null || return 1
+            [[ -f "$activate_" ]] && echo "Not executable: $venv_bin_/$interpreter_" >&2
+            which $interpreter_ > /dev/null || return 1
         fi
     fi
     if [[ -n $NO_SUB_SHELL ]]; then
         # works per call only e.g.
         #     $ NO_SUB_SHELL=1 pypath python -c "import sys; sys.stdout.write('hello world'"
-        PATH=$_path $_interpreter $_script "$@"
+        PATH=$path_ $interpreter_ $script_ "$@"
         NO_SUB_SHELL=
-    elif [[ $_interpreter =~ python || -f "$_activate" ]]; then
+    elif [[ $interpreter_ =~ python || -f "$activate_" ]]; then
         (
-            [[ -f "$_activate" ]] && source "$_activate";
-            PATH=$_path $_interpreter $_script "$@"
+            [[ -f "$activate_" ]] && source "$activate_";
+            PATH=$path_ $interpreter_ $script_ "$@"
         )
     else
         # Other programs might not like the subshell so much
         # pudb refused to co-operate
-        PATH=$_path $_interpreter $_script "$@"
+        PATH=$path_ $interpreter_ $script_ "$@"
     fi
 }
 
@@ -90,26 +88,26 @@ shebang_line () {
 }
 
 shebang_interpreter () {
-    local _interpreter=$1; shift
-    local $_arg="$1"; shift
-    [[ -f "$_arg" ]] || return 1
-    local _script="$_arg"
-    local _shebang_line=$(shebang_line "$_script")
-    local _shebang_executable=
-    local _shebang_interpreter=
-    if [[ $_shebang_line =~ pyth ]]; then
-        if [[ $_shebang_line =~ python ]]; then
-            _shebang_executable=$(shebang_line "$_script" | sed -e "s:#!::")
-            local _debug_executable=${_shebang_line/\#\!/}
-            [[ $_debug_executable == $_shebang_executable ]] && echo TRUE >&2 || echo FALSE >&2
-            if [[ -e $_shebang_executable ]]; then
-                _shebang_interpreter=$($_shebang_executable -c "import sys; sys.stdout.write(sys.executable)")
-                echo $_shebang_interpreter
+    local interpreter_=$1; shift
+    local $arg="$1_"; shift
+    [[ -f "$arg_" ]] || return 1
+    local script_="$arg_"
+    local shebang_line_=$(shebang_line "$script_")
+    local shebang_executable_=
+    local shebang_interpreter_=
+    if [[ $shebang_line_ =~ pyth ]]; then
+        if [[ $shebang_line_ =~ python ]]; then
+            shebang_executable_=$(shebang_line "$script_" | sed -e "s:#!::")
+            local debug_executable_=${shebang_line_/\#\!/}
+            [[ $debug_executable_ == $shebang_executable_ ]] && echo TRUE >&2 || echo FALSE >&2
+            if [[ -e $shebang_executable_ ]]; then
+                shebang_interpreter_=$($shebang_executable_ -c "import sys; sys.stdout.write(sys.executable)")
+                echo $shebang_interpreter_
                 return 0
             fi
-        elif [[ $_shebang_line =~ pyth$ ]]; then
-            if [[ ! $_shebang_line =~ ':-)' ]]; then
-                sed -i -e "s=$_shebang_line=$_shebang_line :-)=" $_script
+        elif [[ $shebang_line_ =~ pyth$ ]]; then
+            if [[ ! $shebang_line_ =~ ':-)' ]]; then
+                sed -i -e "s=$shebang_line_=$shebang_line_ :-)=" $script_
             fi
         fi
     elif [[ $_shebang_line ]]; then
